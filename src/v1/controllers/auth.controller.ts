@@ -6,7 +6,6 @@ import { comparePassword, hashPassword } from "../utils/password";
 import { createOtp } from "../utils/code";
 import { sendMail } from "../utils/mail";
 import {
-  createBusinessValidator,
   registerValidator,
 } from "../validators/auth/auth.validator";
 import { User } from "../models/user.model";

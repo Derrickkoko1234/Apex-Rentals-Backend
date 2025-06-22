@@ -33,14 +33,3 @@ export const registerValidator = Joi.object({
 //     }
 // }
 
-export const createBusinessValidator = Joi.object({
-  name: Joi.string().required(),
-  email: Joi.string().email().required(),
-  industry: Joi.string().required(),
-  address: Joi.string().optional(),
-  phone: Joi.string().required(),
-  staffNumberRange: Joi.object({
-    min: Joi.number().required(),
-    max: Joi.number().required(),
-  }).required(),
-});

@@ -14,6 +14,7 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
     const beds = parseInt(req.query.beds as string);
     const bathrooms = parseInt(req.query.bathrooms as string);
     const minRating = parseFloat(req.query.minRating as string);
+    const maxRating = parseFloat(req.query.maxRating as string);
     const amenities = req.query.amenities as string;
     const sortBy = (req.query.sortBy as string) || "createdAt";
     const sortOrder = (req.query.sortOrder as string) || "desc";
@@ -62,8 +63,14 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
     }
 
     // Rating filter
-    if (minRating && !isNaN(minRating)) {
-      query.rating = { $gte: minRating };
+    if (minRating || maxRating) {
+      query.rating = {};
+      if (minRating) {
+        query.rating.$gte = minRating;
+      }
+      if (maxRating) {
+        query.rating.$lte = maxRating;
+      }
     }
 
     // Amenities filter
@@ -109,6 +116,7 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
           beds,
           bathrooms,
           minRating,
+          maxRating,
           amenities,
           sortBy,
           sortOrder,
