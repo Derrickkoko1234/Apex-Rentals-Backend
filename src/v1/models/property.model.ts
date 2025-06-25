@@ -1,75 +1,153 @@
 import { Schema, model, Types } from "mongoose";
 import { BaseModel } from "../interfaces/general.interface";
+import {
+  PropertyTypes,
+  allPropertySubTypes,
+} from "../enums/propertyTypes.enum";
+import { Utilities, Category } from "../enums/propertyTypes.enum";
 
 interface IProperty extends BaseModel {
-  images: string[];
+  landlord: Types.ObjectId;
   title: string;
-  location: string;
-  price: string;
-  rating: number;
-  reviewCount: number;
-  beds: number;
-  rooms: number;
-  bathrooms: number;
-  amenities: string[];
+  type: string;
+  subType: string;
   address: string;
-  host: {
-    name: string;
-    yearsHosting: number;
-    rating: number;
-    reviewCount: number;
-    image: string;
-  };
-  highlights: {
-    title: string;
-    desc: string;
-  }[];
-  description: string;
-  gallery: {
-    src: string;
-    label: string;
-    desc: string;
-  }[];
   latitude: number;
   longitude: number;
+  utilities: Utilities[];
+  categories: Category[];
+  yearBuilt: number;
+  parking: boolean;
+  furnished: boolean;
+  shortTermRental: boolean;
+  leaseTerms: "daily" | "monthly" | "negotiable";
+  petFriendly: boolean;
+  bedrooms: number;
+  bathrooms: number;
+  rent: number;
+  unitSize: string;
+  photos: string[];
+  description: string;
+  leadContact: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  isApproved: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
 }
 
 const propertySchema = new Schema(
   {
-    images: [{ type: String, required: true }],
-    title: { type: String, required: true },
-    location: { type: String, required: true },
-    price: { type: String, required: true },
-    rating: { type: Number, required: true, min: 0, max: 5 },
-    reviewCount: { type: Number, required: true, min: 0 },
-    beds: { type: Number, required: true, min: 0 },
-    rooms: { type: Number, required: true, min: 0 },
-    bathrooms: { type: Number, required: true, min: 0 },
-    amenities: { type: [String], required: true },
-    address: { type: String, required: true },
-    host: {
-      name: { type: String, required: true },
-      yearsHosting: { type: Number, required: true, min: 0 },
-      rating: { type: Number, required: true, min: 0, max: 5 },
-      reviewCount: { type: Number, required: true, min: 0 },
-      image: { type: String, required: true },
+    title: {
+      type: String,
+      required: true,
+      index: true,
     },
-    highlights: [
-      {
-        title: { type: String, required: true },
-        desc: { type: String, required: true },
-      },
-    ],
-    description: { type: String, required: true },
-    gallery: [
-      {
-        src: { type: String, required: true },
-        label: { type: String, required: true },
-        desc: { type: String, required: true },
-      },
-    ],
-    latitude: { type: Number, required: true },
-    longitude: { type: Number, required: true },
+    landlord: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: Object.values(PropertyTypes),
+      required: true,
+    },
+    subType: {
+      type: String,
+      enum: allPropertySubTypes,
+      required: true,
+    },
+    address: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    latitude: {
+      type: Number,
+      required: true,
+    },
+    longitude: {
+      type: Number,
+      required: true,
+    },
+    utilities: {
+      type: [String],
+      enum: Object.values(Utilities),
+    },
+    categories: {
+      type: [String],
+      enum: Object.values(Category),
+    },
+    yearBuilt: {
+      type: Number,
+      required: true,
+    },
+    parking: {
+      type: Boolean,
+      required: true,
+    },
+    furnished: {
+      type: Boolean,
+      required: true,
+    },
+    shortTermRental: {
+      type: Boolean,
+      required: true,
+    },
+    leaseTerms: {
+      type: String,
+      enum: ["monthly", "negotiable"],
+      required: true,
+    },
+    petFriendly: {
+      type: Boolean,
+      required: true,
+    },
+    bedrooms: {
+      type: Number,
+      required: true,
+    },
+    bathrooms: {
+      type: Number,
+      required: true,
+    },
+    rent: {
+      type: Number,
+      required: true,
+      index: true,
+    },
+    unitSize: {
+      type: String,
+      required: true,
+    },
+    photos: {
+      type: [String],
+      required: true,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    leadContact: {
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      phone: { type: String, required: true },
+    },
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

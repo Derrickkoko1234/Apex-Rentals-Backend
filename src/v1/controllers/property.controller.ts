@@ -1,6 +1,79 @@
 import { Response } from "express";
 import { ExtendedRequest } from "../middlewares/token";
 import { Property } from "../models/property.model";
+import {
+  PropertyTypes,
+  PropertySubTypes,
+  Utilities,
+  Category,
+} from "../enums/propertyTypes.enum";
+
+export async function getPropertyEnums(req: ExtendedRequest, res: Response) {
+  try {
+    const enums = {
+      propertyTypes: Object.values(PropertyTypes),
+      propertySubTypes: PropertySubTypes,
+      utilities: Object.values(Utilities),
+      categories: Object.values(Category),
+    };
+
+    return res.status(200).json({
+      status: true,
+      message: "Enums fetched successfully",
+      data: enums,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function myProperties(req: ExtendedRequest, res: Response) {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized access",
+        data: null,
+      });
+    }
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const query = { landlord: user._id, isDeleted: false };
+
+    const properties = await Property.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalProperties = await Property.countDocuments(query);
+    const totalPages = Math.ceil(totalProperties / limit);
+
+    return res.status(200).json({
+      status: true,
+      message: "My properties fetched successfully",
+      data: {
+        data: properties,
+        currentPage: page,
+        totalPages,
+        total: totalProperties,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
 
 export async function getProperties(req: ExtendedRequest, res: Response) {
   try {
@@ -18,6 +91,8 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
     const amenities = req.query.amenities as string;
     const sortBy = (req.query.sortBy as string) || "createdAt";
     const sortOrder = (req.query.sortOrder as string) || "desc";
+    const type = req.query.type as string;
+    const subType = req.query.subType as string;
 
     // Calculate skip value for pagination
     const skip = (page - 1) * limit;
@@ -79,6 +154,15 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
       query.amenities = { $in: amenitiesArray };
     }
 
+    if (type) {
+      query.type = type;
+    }
+
+    if (subType) {
+      const subTypeArray = subType.split(",").map((a) => a.trim());
+      query.subType = { $in: subTypeArray };
+    }
+
     // Build sort object
     const sort: any = {};
     sort[sortBy] = sortOrder === "asc" ? 1 : -1;
@@ -130,5 +214,92 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
       message: (err as Error).message,
       data: null,
     });
+  }
+}
+
+export async function createProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const {
+      title,
+      type,
+      subType,
+      address,
+      latitude,
+      longitude,
+      utilities,
+      categories,
+      yearBuilt,
+      parking,
+      furnished,
+      shortTermRental,
+      leaseTerms,
+      petFriendly,
+      bedrooms,
+      bathrooms,
+      rent,
+      unitSize,
+      photos,
+      description,
+      leadContact,
+    } = req.body;
+
+    const landlord = req.user?._id;
+    if (!landlord) {
+      return res
+        .status(401)
+        .json({ status: false, message: "Unauthorized", data: null });
+    }
+
+    // Validate type
+    if (!Object.values(PropertyTypes).includes(type)) {
+      return res
+        .status(400)
+        .json({ status: false, message: "Invalid property type", data: null });
+    }
+
+    // Create new property document
+    const newProperty = new Property({
+      landlord,
+      title,
+      type,
+      subType,
+      address,
+      latitude,
+      longitude,
+      utilities,
+      categories,
+      yearBuilt,
+      parking,
+      furnished,
+      shortTermRental,
+      leaseTerms,
+      petFriendly,
+      bedrooms,
+      bathrooms,
+      rent,
+      unitSize,
+      photos,
+      description,
+      leadContact,
+    });
+
+    // Save property to database
+    const savedProperty = await newProperty.save();
+
+    return res
+      .status(201)
+      .json({
+        status: true,
+        message: "Property created successfully",
+        data: savedProperty,
+      });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({
+        status: false,
+        message: (err as Error).message,
+        data: null,
+      });
   }
 }

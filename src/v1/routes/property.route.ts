@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { getProperties } from "../controllers/property.controller";
+import {
+  getPropertyEnums,
+  myProperties,
+  getProperties,
+  createProperty,
+} from "../controllers/property.controller";
 import {
   verifyToken,
   verifyTokenOptional,
@@ -9,6 +14,12 @@ import {
 import { RoleEnum } from "../enums/role.enum";
 
 const router = Router();
+
+// Endpoint to get property-related enums (e.g., types, subtypes, utilities, categories)
+router.get("/enums", getPropertyEnums);
+
+// Endpoint to get properties for the authenticated user (landlord)
+router.get("/my-properties", verifyToken, myProperties);
 
 // Public endpoint with optional user context (for personalized results)
 router.get(
@@ -29,8 +40,8 @@ router.get(
 // Admin and Landlord can create properties
 router.post(
   "/create",
-  verifyTokenAndRole(RoleEnum.ADMIN, RoleEnum.LANDLORD)
-  // createProperty controller would go here
+  verifyTokenAndRole(RoleEnum.ADMIN, RoleEnum.LANDLORD),
+  createProperty
 );
 
 // Only property owner or admin can update
