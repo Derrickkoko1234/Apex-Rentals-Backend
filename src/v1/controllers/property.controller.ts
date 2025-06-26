@@ -77,103 +77,77 @@ export async function myProperties(req: ExtendedRequest, res: Response) {
 
 export async function getProperties(req: ExtendedRequest, res: Response) {
   try {
-    // Extract query parameters with defaults
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string;
-    const location = req.query.location as string;
-    const minPrice = req.query.minPrice as string;
-    const maxPrice = req.query.maxPrice as string;
-    const beds = parseInt(req.query.beds as string);
+    const minRent = req.query.minRent as string;
+    const maxRent = req.query.maxRent as string;
+    const bedrooms = parseInt(req.query.bedrooms as string);
     const bathrooms = parseInt(req.query.bathrooms as string);
-    const minRating = parseFloat(req.query.minRating as string);
-    const maxRating = parseFloat(req.query.maxRating as string);
-    const amenities = req.query.amenities as string;
+    const utilities = req.query.utilities as string;
     const sortBy = (req.query.sortBy as string) || "createdAt";
     const sortOrder = (req.query.sortOrder as string) || "desc";
     const type = req.query.type as string;
     const subType = req.query.subType as string;
+    const categories = req.query.categories as string;
+    const minYearBuilt = parseInt(req.query.minYearBuilt as string);
+    const maxYearBuilt = parseInt(req.query.maxYearBuilt as string);
+    const parking = req.query.parking as string;
+    const furnished = req.query.furnished as string;
+    const shortTermRental = req.query.shortTermRental as string;
+    const leaseTerms = req.query.leaseTerms as string;
+    const petFriendly = req.query.petFriendly as string;
 
-    // Calculate skip value for pagination
     const skip = (page - 1) * limit;
+    const query: any = { isApproved: true, isDeleted: false };
 
-    // Build query object
-    const query: any = {};
-
-    // Search functionality (search in title, location, description)
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
-        { location: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
         { address: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
       ];
     }
 
-    // Location filter
-    if (location) {
-      query.location = { $regex: location, $options: "i" };
+    if (minRent || maxRent) {
+      query.rent = {};
+      if (minRent) query.rent.$gte = parseFloat(minRent);
+      if (maxRent) query.rent.$lte = parseFloat(maxRent);
     }
+    if (bedrooms && !isNaN(bedrooms)) query.bedrooms = bedrooms;
+    if (bathrooms && !isNaN(bathrooms)) query.bathrooms = bathrooms;
 
-    // Price range filter
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) {
-        // Extract numeric value from price string (assuming format like "$100/night")
-        query.price.$gte = minPrice;
-      }
-      if (maxPrice) {
-        query.price.$lte = maxPrice;
-      }
+    if (utilities) {
+      const utilitiesArray = utilities.split(",").map((u) => u.trim());
+      query.utilities = { $in: utilitiesArray };
     }
-
-    // Beds filter
-    if (beds && !isNaN(beds)) {
-      query.beds = beds;
-    }
-
-    // Bathrooms filter
-    if (bathrooms && !isNaN(bathrooms)) {
-      query.bathrooms = bathrooms;
-    }
-
-    // Rating filter
-    if (minRating || maxRating) {
-      query.rating = {};
-      if (minRating) {
-        query.rating.$gte = minRating;
-      }
-      if (maxRating) {
-        query.rating.$lte = maxRating;
-      }
-    }
-
-    // Amenities filter
-    if (amenities) {
-      const amenitiesArray = amenities.split(",").map((a) => a.trim());
-      query.amenities = { $in: amenitiesArray };
-    }
-
-    if (type) {
-      query.type = type;
-    }
-
+    if (type) query.type = type;
     if (subType) {
-      const subTypeArray = subType.split(",").map((a) => a.trim());
+      const subTypeArray = subType.split(",").map((s) => s.trim());
       query.subType = { $in: subTypeArray };
     }
+    if (categories) {
+      const categoriesArray = categories.split(",").map((c) => c.trim());
+      query.categories = { $in: categoriesArray };
+    }
+    if (minYearBuilt || maxYearBuilt) {
+      query.yearBuilt = {};
+      if (minYearBuilt) query.yearBuilt.$gte = minYearBuilt;
+      if (maxYearBuilt) query.yearBuilt.$lte = maxYearBuilt;
+    }
+    if (parking) query.parking = parking === "true";
+    if (furnished) query.furnished = furnished === "true";
+    if (shortTermRental) query.shortTermRental = shortTermRental === "true";
+    if (leaseTerms) query.leaseTerms = leaseTerms;
+    if (petFriendly) query.petFriendly = petFriendly === "true";
 
-    // Build sort object
-    const sort: any = {};
-    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+    const sort: any = { [sortBy]: sortOrder === "asc" ? 1 : -1 };
 
-    // Execute query with pagination
     const [properties, totalCount] = await Promise.all([
       Property.find(query).sort(sort).skip(skip).limit(limit).exec(),
       Property.countDocuments(query),
     ]);
 
-    // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
@@ -194,16 +168,23 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
         },
         filters: {
           search,
-          location,
-          minPrice,
-          maxPrice,
-          beds,
+          minRent,
+          maxRent,
+          bedrooms,
           bathrooms,
-          minRating,
-          maxRating,
-          amenities,
+          utilities,
           sortBy,
           sortOrder,
+          type,
+          subType,
+          categories,
+          minYearBuilt,
+          maxYearBuilt,
+          parking,
+          furnished,
+          shortTermRental,
+          leaseTerms,
+          petFriendly,
         },
         data: properties,
       },
@@ -286,20 +267,16 @@ export async function createProperty(req: ExtendedRequest, res: Response) {
     // Save property to database
     const savedProperty = await newProperty.save();
 
-    return res
-      .status(201)
-      .json({
-        status: true,
-        message: "Property created successfully",
-        data: savedProperty,
-      });
+    return res.status(201).json({
+      status: true,
+      message: "Property created successfully",
+      data: savedProperty,
+    });
   } catch (err) {
-    return res
-      .status(500)
-      .json({
-        status: false,
-        message: (err as Error).message,
-        data: null,
-      });
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
   }
 }

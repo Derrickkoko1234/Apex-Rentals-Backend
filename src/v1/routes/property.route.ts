@@ -24,8 +24,7 @@ router.get("/my-properties", verifyToken, myProperties);
 // Public endpoint with optional user context (for personalized results)
 router.get(
   "/",
-  createUserRateLimit(1000, 3600000),
-  verifyTokenOptional,
+  // createUserRateLimit(1000, 3600000),
   getProperties
 );
 
