@@ -7,6 +7,7 @@ import {
   Utilities,
   Category,
 } from "../enums/propertyTypes.enum";
+import { WishlistItem } from "../models/wishlist.model";
 
 export async function getPropertyEnums(req: ExtendedRequest, res: Response) {
   try {
@@ -188,6 +189,212 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
         },
         data: properties,
       },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function getProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+
+    const property = await Property.findOne({
+      _id: propertyId,
+    });
+
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: "Property not found",
+        data: null,
+      });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Property fetched successfully",
+      data: property,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function addToWishlist(req: ExtendedRequest, res: Response) {
+  try {
+    const userId = req.user?._id;
+    const propertyId = req.params.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized access",
+        data: null,
+      });
+    }
+
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+
+    // Check if the property already exists in the wishlist
+    const existingItem = await WishlistItem.findOne({
+      user: userId,
+      property: propertyId,
+    })
+      .populate("property")
+      .populate("user");
+
+    if (existingItem) {
+      return res.status(400).json({
+        status: false,
+        message: "Property already in wishlist",
+        data: null,
+      });
+    }
+
+    // Create new wishlist item
+    const newWishlistItem = new WishlistItem({
+      user: userId,
+      property: propertyId,
+    });
+
+    const savedItem = await newWishlistItem.save();
+
+    return res.status(201).json({
+      status: true,
+      message: "Property added to wishlist successfully",
+      data: savedItem,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function getUserWishlistItems(
+  req: ExtendedRequest,
+  res: Response
+) {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized access",
+        data: null,
+      });
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const wishlistItems = await WishlistItem.find({ user: userId })
+      .populate({
+        path: "property",
+        match: { isDeleted: false },
+      })
+      .populate("user")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Filter out items where the property was deleted
+    const validWishlistItems = wishlistItems.filter(
+      (item) => item.property !== null
+    );
+
+    const totalWishlistItems = await WishlistItem.countDocuments({
+      user: userId,
+      property: { $exists: true, $ne: null },
+    });
+
+    const totalPages = Math.ceil(totalWishlistItems / limit);
+
+    return res.status(200).json({
+      status: true,
+      message: "Wishlist items fetched successfully",
+      data: {
+        currentPage: page,
+        totalPages,
+        total: totalWishlistItems,
+        data: validWishlistItems,
+        items: validWishlistItems,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function removeFromWishlist(req: ExtendedRequest, res: Response) {
+  try {
+    const userId = req.user?._id;
+    const propertyId = req.params.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized access",
+        data: null,
+      });
+    }
+
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+
+    // Find and delete the wishlist item
+    const deletedItem = await WishlistItem.findOneAndDelete({
+      user: userId,
+      property: propertyId,
+    });
+
+    if (!deletedItem) {
+      return res.status(404).json({
+        status: false,
+        message: "Wishlist item not found",
+        data: null,
+      });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Property removed from wishlist successfully",
+      data: null,
     });
   } catch (err) {
     return res.status(500).json({

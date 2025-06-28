@@ -3,6 +3,10 @@ import {
   getPropertyEnums,
   myProperties,
   getProperties,
+  getProperty,
+  addToWishlist,
+  getUserWishlistItems,
+  removeFromWishlist,
   createProperty,
 } from "../controllers/property.controller";
 import {
@@ -28,33 +32,45 @@ router.get(
   getProperties
 );
 
-// Example of rate-limited endpoint for authenticated users
-router.get(
-  "/search",
-  createUserRateLimit(1000, 3600000), // 100 requests per hour per user
-  verifyToken,
-  getProperties
-);
+// Endpoint to get a specific property by ID
+router.get("/get-property/:id", getProperty);
 
-// Admin and Landlord can create properties
-router.post(
-  "/create",
-  verifyTokenAndRole(RoleEnum.ADMIN, RoleEnum.LANDLORD),
-  createProperty
-);
+// Endpoint to add a property to the user's wishlist
+router.post("/wishlist/:id", verifyToken, addToWishlist);
 
-// Only property owner or admin can update
-router.put(
-  "/:id",
-  verifyTokenAndRole(RoleEnum.ADMIN, RoleEnum.LANDLORD)
-  // updateProperty controller would go here
-);
+// Endpoint to get the user's wishlist items
+router.get("/wishlist", verifyToken, getUserWishlistItems);
 
-// Only admin can delete properties
-router.delete(
-  "/:id",
-  verifyTokenAndRole(RoleEnum.ADMIN)
-  // deleteProperty controller would go here
-);
+// Endpoint to remove a property from the user's wishlist
+router.delete("/wishlist/:id", verifyToken, removeFromWishlist);
+
+// // Example of rate-limited endpoint for authenticated users
+// router.get(
+//   "/search",
+//   createUserRateLimit(1000, 3600000), // 100 requests per hour per user
+//   verifyToken,
+//   getProperties
+// );
+
+// // Admin and Landlord can create properties
+// router.post(
+//   "/create",
+//   verifyTokenAndRole(RoleEnum.ADMIN, RoleEnum.LANDLORD),
+//   createProperty
+// );
+
+// // Only property owner or admin can update
+// router.put(
+//   "/:id",
+//   verifyTokenAndRole(RoleEnum.ADMIN, RoleEnum.LANDLORD)
+//   // updateProperty controller would go here
+// );
+
+// // Only admin can delete properties
+// router.delete(
+//   "/:id",
+//   verifyTokenAndRole(RoleEnum.ADMIN)
+//   // deleteProperty controller would go here
+// );
 
 export default router;
