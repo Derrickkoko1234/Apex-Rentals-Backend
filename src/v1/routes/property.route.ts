@@ -44,6 +44,8 @@ router.get("/wishlist", verifyToken, getUserWishlistItems);
 // Endpoint to remove a property from the user's wishlist
 router.delete("/wishlist/:id", verifyToken, removeFromWishlist);
 
+router.post("/create", verifyTokenAndRole(RoleEnum.LANDLORD), createProperty);
+
 // // Example of rate-limited endpoint for authenticated users
 // router.get(
 //   "/search",

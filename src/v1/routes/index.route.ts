@@ -3,6 +3,7 @@ import multer from "multer";
 import authRoutes from "./auth.route";
 import userRoutes from "./user.route";
 import propertyRoutes from "./property.route";
+import bookingRoutes from "./booking.route";
 import { imagekitUploader } from "../utils/imageKitUpload";
 import { verifyToken } from "../middlewares/token";
 
@@ -11,6 +12,7 @@ const router = Router();
 router.use("/auth", authRoutes);
 router.use("/user", userRoutes);
 router.use("/property", propertyRoutes);
+router.use("/bookings", bookingRoutes);
 
 type FileType = "images" | "pdf" | "audio" | "video";
 

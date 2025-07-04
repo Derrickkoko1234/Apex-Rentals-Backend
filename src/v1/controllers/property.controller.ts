@@ -212,7 +212,8 @@ export async function getProperty(req: ExtendedRequest, res: Response) {
 
     const property = await Property.findOne({
       _id: propertyId,
-    });
+    })
+    .populate("landlord")
 
     if (!property) {
       return res.status(404).json({
