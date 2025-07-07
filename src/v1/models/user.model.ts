@@ -19,7 +19,7 @@ const UserSchema: Schema = new Schema(
   {
     role: {
       type: String,
-      enum: [RoleEnum.USER, RoleEnum.LANDLORD],
+      enum: [RoleEnum.USER, RoleEnum.LANDLORD, RoleEnum.ADMIN],
       default: RoleEnum.USER,
     },
     firstName: {

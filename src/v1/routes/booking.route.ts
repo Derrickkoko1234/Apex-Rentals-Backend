@@ -4,40 +4,27 @@ import {
   verifyBookingPayment,
   getUserBookings,
   getBookingDetails,
+  getAllBookings,
+  getBookingByIdAdmin,
+  updateBookingStatus,
+  cancelBookingAdmin,
+  getBookingStats,
 } from "../controllers/booking.controller";
-import { verifyToken } from "../middlewares/token";
+import { verifyToken, verifyTokenAndAdmin } from "../middlewares/token";
 
 const router = Router();
 
-// All booking routes are protected and require a valid token
-router.use(verifyToken);
+// User booking routes (protected)
+router.post("/create", verifyToken, createBooking);
+router.get("/verify-payment", verifyToken, verifyBookingPayment);
+router.get("/user/bookings", verifyToken, getUserBookings);
+router.get("/user/:id", verifyToken, getBookingDetails);
 
-/**
- * @route POST /bookings/create
- * @description Create a new booking and initiate payment
- * @access Private
- */
-router.post("/create", createBooking);
-
-/**
- * @route GET /bookings/verify-payment
- * @description Verify a Paystack payment and confirm booking
- * @access Private
- */
-router.get("/verify-payment", verifyBookingPayment);
-
-/**
- * @route GET /bookings
- * @description Get all bookings for the authenticated user
- * @access Private
- */
-router.get("/", getUserBookings);
-
-/**
- * @route GET /bookings/:id
- * @description Get details for a specific booking
- * @access Private
- */
-router.get("/:id", getBookingDetails);
+// Admin booking routes (admin only)
+router.get("/admin/all", verifyTokenAndAdmin, getAllBookings);
+router.get("/admin/stats", verifyTokenAndAdmin, getBookingStats);
+router.get("/admin/:id", verifyTokenAndAdmin, getBookingByIdAdmin);
+router.put("/admin/:id/status", verifyTokenAndAdmin, updateBookingStatus);
+router.put("/admin/:id/cancel", verifyTokenAndAdmin, cancelBookingAdmin);
 
 export default router;

@@ -238,3 +238,303 @@ export async function getBookingDetails(req: ExtendedRequest, res: Response) {
       .json({ status: false, message: (err as Error).message });
   }
 }
+
+// ADMIN ENDPOINTS
+
+// Get all bookings with pagination and filtering
+export async function getAllBookings(req: ExtendedRequest, res: Response) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const bookingStatus = req.query.bookingStatus as string;
+    const paymentStatus = req.query.paymentStatus as string;
+    const userId = req.query.userId as string;
+    const propertyId = req.query.propertyId as string;
+
+    const skip = (page - 1) * limit;
+
+    // Build query
+    const query: any = {};
+
+    if (
+      bookingStatus &&
+      Object.values(BookingStatus).includes(bookingStatus as BookingStatus)
+    ) {
+      query.bookingStatus = bookingStatus;
+    }
+
+    if (
+      paymentStatus &&
+      Object.values(PaymentStatus).includes(paymentStatus as PaymentStatus)
+    ) {
+      query.paymentStatus = paymentStatus;
+    }
+
+    if (userId && isValidObjectId(userId)) {
+      query.user = userId;
+    }
+
+    if (propertyId && isValidObjectId(propertyId)) {
+      query.property = propertyId;
+    }
+
+    const bookings = await Booking.find(query)
+      .populate("user", "firstName lastName email phone")
+      .populate("property", "title address rent")
+      .populate("paymentId")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const totalBookings = await Booking.countDocuments(query);
+
+    return res.status(200).json({
+      status: true,
+      message: "Bookings retrieved successfully",
+      data: {
+        bookings,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalBookings / limit),
+          totalBookings,
+          hasNext: page < Math.ceil(totalBookings / limit),
+          hasPrev: page > 1,
+        },
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+    });
+  }
+}
+
+// Get booking by ID
+export async function getBookingByIdAdmin(req: ExtendedRequest, res: Response) {
+  const { id } = req.params;
+
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid booking ID",
+    });
+  }
+
+  try {
+    const booking = await Booking.findById(id)
+      .populate("user", "firstName lastName email phone address")
+      .populate("property")
+      .populate("paymentId");
+
+    if (!booking) {
+      return res.status(404).json({
+        status: false,
+        message: "Booking not found",
+      });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Booking details retrieved",
+      data: booking,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+    });
+  }
+}
+
+// Update booking status
+export async function updateBookingStatus(req: ExtendedRequest, res: Response) {
+  const { id } = req.params;
+  const { bookingStatus, paymentStatus } = req.body;
+
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid booking ID",
+    });
+  }
+
+  try {
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        status: false,
+        message: "Booking not found",
+      });
+    }
+
+    const updateData: any = {};
+
+    if (bookingStatus && Object.values(BookingStatus).includes(bookingStatus)) {
+      updateData.bookingStatus = bookingStatus;
+    }
+
+    if (paymentStatus && Object.values(PaymentStatus).includes(paymentStatus)) {
+      updateData.paymentStatus = paymentStatus;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: "No valid fields to update",
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    )
+      .populate("user", "firstName lastName email phone")
+      .populate("property", "title address rent")
+      .populate("paymentId");
+
+    return res.status(200).json({
+      status: true,
+      message: "Booking status updated successfully",
+      data: updatedBooking,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+    });
+  }
+}
+
+// Cancel booking (admin)
+export async function cancelBookingAdmin(req: ExtendedRequest, res: Response) {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid booking ID",
+    });
+  }
+
+  try {
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        status: false,
+        message: "Booking not found",
+      });
+    }
+
+    if (booking.bookingStatus === BookingStatus.CANCELLED) {
+      return res.status(400).json({
+        status: false,
+        message: "Booking is already cancelled",
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      id,
+      {
+        bookingStatus: BookingStatus.CANCELLED,
+        // You might want to add a cancellation reason field to your model
+      },
+      { new: true }
+    )
+      .populate("user", "firstName lastName email phone")
+      .populate("property", "title address rent")
+      .populate("paymentId");
+
+    // TODO: Handle refund logic if payment was made
+    // TODO: Send cancellation notification to user
+
+    return res.status(200).json({
+      status: true,
+      message: "Booking cancelled successfully",
+      data: updatedBooking,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+    });
+  }
+}
+
+// Get booking statistics
+export async function getBookingStats(req: ExtendedRequest, res: Response) {
+  try {
+    const totalBookings = await Booking.countDocuments();
+    const pendingBookings = await Booking.countDocuments({
+      bookingStatus: BookingStatus.PENDING,
+    });
+    const confirmedBookings = await Booking.countDocuments({
+      bookingStatus: BookingStatus.CONFIRMED,
+    });
+    const cancelledBookings = await Booking.countDocuments({
+      bookingStatus: BookingStatus.CANCELLED,
+    });
+    const completedBookings = await Booking.countDocuments({
+      bookingStatus: BookingStatus.COMPLETED,
+    });
+
+    const paidBookings = await Booking.countDocuments({
+      paymentStatus: PaymentStatus.PAID,
+    });
+    const pendingPayments = await Booking.countDocuments({
+      paymentStatus: PaymentStatus.PENDING,
+    });
+    const failedPayments = await Booking.countDocuments({
+      paymentStatus: PaymentStatus.FAILED,
+    });
+
+    // Get bookings from the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentBookings = await Booking.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+
+    // Get total revenue from confirmed bookings
+    const revenueData = await Booking.aggregate([
+      { $match: { paymentStatus: PaymentStatus.PAID } },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalAmount" } } },
+    ]);
+
+    const totalRevenue = revenueData.length > 0 ? revenueData[0].totalRevenue : 0;
+
+    return res.status(200).json({
+      status: true,
+      message: "Booking statistics retrieved successfully",
+      data: {
+        totalBookings,
+        pendingBookings,
+        confirmedBookings,
+        cancelledBookings,
+        completedBookings,
+        paidBookings,
+        pendingPayments,
+        failedPayments,
+        recentBookings,
+        totalRevenue,
+        conversionRate:
+          totalBookings > 0
+            ? ((confirmedBookings / totalBookings) * 100).toFixed(2)
+            : 0,
+        paymentSuccessRate:
+          totalBookings > 0
+            ? ((paidBookings / totalBookings) * 100).toFixed(2)
+            : 0,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+    });
+  }
+}

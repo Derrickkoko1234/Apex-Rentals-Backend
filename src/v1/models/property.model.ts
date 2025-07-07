@@ -34,6 +34,7 @@ interface IProperty extends BaseModel {
     phone: string;
   };
   isApproved: boolean;
+  isRejected: boolean;
   isDeleted: boolean;
   deletedAt?: Date;
 }
@@ -137,6 +138,10 @@ const propertySchema = new Schema(
       phone: { type: String, required: true },
     },
     isApproved: {
+      type: Boolean,
+      default: false,
+    },
+    isRejected: {
       type: Boolean,
       default: false,
     },

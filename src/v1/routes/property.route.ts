@@ -8,6 +8,8 @@ import {
   getUserWishlistItems,
   removeFromWishlist,
   createProperty,
+  approveProperty,
+  rejectProperty,getAllProperties
 } from "../controllers/property.controller";
 import {
   verifyToken,
@@ -45,6 +47,23 @@ router.get("/wishlist", verifyToken, getUserWishlistItems);
 router.delete("/wishlist/:id", verifyToken, removeFromWishlist);
 
 router.post("/create", verifyTokenAndRole(RoleEnum.LANDLORD), createProperty);
+
+// Endpoint to approve a property (admin only)
+router.post(
+  "/approve/:id",
+  verifyTokenAndRole(RoleEnum.ADMIN),
+  approveProperty
+);
+
+// Endpoint to reject a property (admin only)
+router.post("/reject/:id", verifyTokenAndRole(RoleEnum.ADMIN), rejectProperty);
+
+// Endpoint to get all properties (admin only)
+router.get(
+  "/all-properties",
+  verifyTokenAndRole(RoleEnum.ADMIN),
+  getAllProperties
+);
 
 // // Example of rate-limited endpoint for authenticated users
 // router.get(

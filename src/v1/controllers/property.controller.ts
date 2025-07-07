@@ -212,8 +212,7 @@ export async function getProperty(req: ExtendedRequest, res: Response) {
 
     const property = await Property.findOne({
       _id: propertyId,
-    })
-    .populate("landlord")
+    }).populate("landlord");
 
     if (!property) {
       return res.status(404).json({
@@ -479,6 +478,116 @@ export async function createProperty(req: ExtendedRequest, res: Response) {
       status: true,
       message: "Property created successfully",
       data: savedProperty,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function approveProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: "Property not found",
+        data: null,
+      });
+    }
+
+    property.isApproved = true;
+    const updatedProperty = await property.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Property approved successfully",
+      data: updatedProperty,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function rejectProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: "Property not found",
+        data: null,
+      });
+    }
+
+    property.isApproved = false;
+    property.isRejected = true; // Mark as rejected
+    const updatedProperty = await property.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Property rejected successfully",
+      data: updatedProperty,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function getAllProperties(req: ExtendedRequest, res: Response) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const properties = await Property.find({ isDeleted: false })
+    .populate("landlord")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalProperties = await Property.countDocuments({ isDeleted: false });
+    const totalPages = Math.ceil(totalProperties / limit);
+
+    return res.status(200).json({
+      status: true,
+      message: "All properties fetched successfully",
+      data: {
+        data: properties,
+        currentPage: page,
+        totalPages,
+        total: totalProperties,
+      },
     });
   } catch (err) {
     return res.status(500).json({
