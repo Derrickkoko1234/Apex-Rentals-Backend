@@ -8,6 +8,8 @@ import {
   Category,
 } from "../enums/propertyTypes.enum";
 import { WishlistItem } from "../models/wishlist.model";
+import { Review } from "../models/review.model";
+import { Booking } from "../models/booking.model";
 
 export async function getPropertyEnums(req: ExtendedRequest, res: Response) {
   try {
@@ -571,7 +573,7 @@ export async function getAllProperties(req: ExtendedRequest, res: Response) {
     const skip = (page - 1) * limit;
 
     const properties = await Property.find({ isDeleted: false })
-    .populate("landlord")
+      .populate("landlord")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -595,5 +597,109 @@ export async function getAllProperties(req: ExtendedRequest, res: Response) {
       message: (err as Error).message,
       data: null,
     });
+  }
+}
+
+export async function createReview(req: ExtendedRequest, res: Response) {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res
+        .status(401)
+        .json({ status: false, message: "Unauthorized", data: null });
+    }
+    const userId = user._id;
+    const { propertyId, bookingId, rating, comment } = req.body;
+    if (!userId || !propertyId || !bookingId || !rating || !comment) {
+      return res.status(400).json({
+        status: false,
+        message: "Missing required fields",
+        data: null,
+      });
+    }
+    // Check if booking exists, belongs to user, is for the property, and is completed
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      user: userId,
+      property: propertyId,
+      status: "completed",
+    });
+    if (!booking) {
+      return res.status(403).json({
+        status: false,
+        message:
+          "You can only review properties you have completed a booking for.",
+        data: null,
+      });
+    }
+    // Check if review already exists for this booking
+    const existing = await Review.findOne({
+      property: propertyId,
+      user: userId,
+      booking: bookingId,
+    });
+    if (existing) {
+      return res.status(400).json({
+        status: false,
+        message: "You have already reviewed this booking.",
+        data: null,
+      });
+    }
+    const review = new Review({
+      property: propertyId,
+      user: userId,
+      booking: bookingId,
+      rating,
+      comment,
+    });
+    await review.save();
+    return res.status(201).json({
+      status: true,
+      message: "Review submitted successfully",
+      data: review,
+    });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ status: false, message: (err as Error).message, data: null });
+  }
+}
+
+export async function getPropertyReviews(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+    const reviews = await Review.find({ property: propertyId })
+      .populate("user", "firstName lastName avatar")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    const totalReviews = await Review.countDocuments({ property: propertyId });
+    const totalPages = Math.ceil(totalReviews / limit);
+
+    return res.status(200).json({
+      status: true,
+      message: "Reviews fetched successfully",
+      data: {
+        data: reviews,
+        currentPage: page,
+        totalPages,
+        total: totalReviews,
+      },
+    });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ status: false, message: (err as Error).message, data: null });
   }
 }

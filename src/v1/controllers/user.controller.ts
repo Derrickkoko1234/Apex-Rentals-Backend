@@ -196,14 +196,10 @@ export async function getAllUsers(req: ExtendedRequest, res: Response) {
       status: true,
       message: "Users retrieved successfully",
       data: {
-        users,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalUsers / limit),
-          totalUsers,
-          hasNext: page < Math.ceil(totalUsers / limit),
-          hasPrev: page > 1
-        }
+        data: users,
+        currentPage: page,
+        totalPages: Math.ceil(totalUsers / limit),
+        total: totalUsers,
       }
     });
   } catch (err) {

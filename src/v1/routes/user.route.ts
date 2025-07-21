@@ -25,6 +25,6 @@ router.get("/admin/stats", verifyTokenAndAdmin, getUserStats);
 router.get("/admin/:id", verifyTokenAndAdmin, getUserById);
 router.put("/admin/:id", verifyTokenAndAdmin, updateUserById);
 router.delete("/admin/:id", verifyTokenAndAdmin, deleteUserById);
-router.patch("/admin/:id/toggle-verification", verifyTokenAndAdmin, toggleUserVerification);
+router.put("/admin/:id/toggle-verification", verifyTokenAndAdmin, toggleUserVerification);
 
 export default router;
