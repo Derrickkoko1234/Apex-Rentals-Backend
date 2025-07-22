@@ -4,6 +4,8 @@ import authRoutes from "./auth.route";
 import userRoutes from "./user.route";
 import propertyRoutes from "./property.route";
 import bookingRoutes from "./booking.route";
+import chatRoutes from "./chat.route";
+import adminRoutes from "./admin/index.route";
 import { imagekitUploader } from "../utils/imageKitUpload";
 import { verifyToken } from "../middlewares/token";
 
@@ -13,6 +15,8 @@ router.use("/auth", authRoutes);
 router.use("/user", userRoutes);
 router.use("/property", propertyRoutes);
 router.use("/bookings", bookingRoutes);
+router.use("/chat", chatRoutes);
+router.use("/admin", adminRoutes);
 
 type FileType = "images" | "pdf" | "audio" | "video";
 

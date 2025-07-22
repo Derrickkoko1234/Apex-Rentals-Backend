@@ -9,7 +9,7 @@ import {
   removeFromWishlist,
   createProperty,
   approveProperty,
-  rejectProperty,getAllProperties
+  rejectProperty,getAllProperties, createReview, getPropertyReviews
 } from "../controllers/property.controller";
 import {
   verifyToken,
@@ -64,6 +64,11 @@ router.get(
   verifyTokenAndRole(RoleEnum.ADMIN),
   getAllProperties
 );
+
+// Fetch reviews for a property
+router.get("/:id/reviews", getPropertyReviews);
+// Create a review for a property (user must be authenticated)
+router.post("/:id/reviews", verifyToken, createReview);
 
 // // Example of rate-limited endpoint for authenticated users
 // router.get(

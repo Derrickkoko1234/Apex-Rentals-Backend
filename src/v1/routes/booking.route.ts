@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   createBooking,
   verifyBookingPayment,
-  getUserBookings,
+  getUserBookings,getLandlordBookings,
   getBookingDetails,
   getAllBookings,
   getBookingByIdAdmin,
@@ -18,7 +18,8 @@ const router = Router();
 router.post("/create", verifyToken, createBooking);
 router.get("/verify-payment", verifyToken, verifyBookingPayment);
 router.get("/user/bookings", verifyToken, getUserBookings);
-router.get("/user/:id", verifyToken, getBookingDetails);
+router.get("/landlord/bookings", verifyToken, getLandlordBookings);
+router.get("/get-booking/:id", verifyToken, getBookingDetails);
 
 // Admin booking routes (admin only)
 router.get("/admin/all", verifyTokenAndAdmin, getAllBookings);

@@ -210,6 +210,72 @@ export async function getUserBookings(req: ExtendedRequest, res: Response) {
   }
 }
 
+export async function getLandlordBookings(req: ExtendedRequest, res: Response) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    // First, get all property IDs owned by the landlord
+    const properties = await Property.find({
+      landlord: req.user?._id,
+      isDeleted: false,
+    }).select("_id");
+
+    const propertyIds = properties.map((p) => p._id);
+
+    // If landlord has no properties, return empty array
+    if (propertyIds.length === 0) {
+      return res.status(200).json({
+        status: true,
+        data: {
+          bookings: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            total: 0,
+          },
+        },
+      });
+    }
+
+    // Find bookings for these properties
+    const [bookings, total] = await Promise.all([
+      Booking.find({ property: { $in: propertyIds } })
+        .populate({
+          path: "property",
+          select: "title address photos",
+        })
+        .populate({
+          path: "paymentId",
+          select: "amount reference status",
+        })
+        .populate({
+          path: "user",
+          select: "firstName lastName email phone",
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Booking.countDocuments({ property: { $in: propertyIds } }),
+    ]);
+
+    return res.status(200).json({
+      status: true,
+      data: {
+        data: bookings,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        total,
+      },
+    });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ status: false, message: (err as Error).message });
+  }
+}
+
 export async function getBookingDetails(req: ExtendedRequest, res: Response) {
   const { id } = req.params;
   if (!isValidObjectId(id)) {
@@ -292,14 +358,10 @@ export async function getAllBookings(req: ExtendedRequest, res: Response) {
       status: true,
       message: "Bookings retrieved successfully",
       data: {
-        bookings,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalBookings / limit),
-          totalBookings,
-          hasNext: page < Math.ceil(totalBookings / limit),
-          hasPrev: page > 1,
-        },
+        data: bookings,
+        currentPage: page,
+        totalPages: Math.ceil(totalBookings / limit),
+        total: totalBookings,
       },
     });
   } catch (err) {
@@ -386,11 +448,9 @@ export async function updateBookingStatus(req: ExtendedRequest, res: Response) {
       });
     }
 
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    )
+    const updatedBooking = await Booking.findByIdAndUpdate(id, updateData, {
+      new: true,
+    })
       .populate("user", "firstName lastName email phone")
       .populate("property", "title address rent")
       .populate("paymentId");
@@ -505,7 +565,8 @@ export async function getBookingStats(req: ExtendedRequest, res: Response) {
       { $group: { _id: null, totalRevenue: { $sum: "$totalAmount" } } },
     ]);
 
-    const totalRevenue = revenueData.length > 0 ? revenueData[0].totalRevenue : 0;
+    const totalRevenue =
+      revenueData.length > 0 ? revenueData[0].totalRevenue : 0;
 
     return res.status(200).json({
       status: true,
