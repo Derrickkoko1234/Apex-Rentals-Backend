@@ -19,7 +19,7 @@ router.post("/create", verifyToken, createBooking);
 router.get("/verify-payment", verifyToken, verifyBookingPayment);
 router.get("/user/bookings", verifyToken, getUserBookings);
 router.get("/landlord/bookings", verifyToken, getLandlordBookings);
-router.get("/user/:id", verifyToken, getBookingDetails);
+router.get("/get-booking/:id", verifyToken, getBookingDetails);
 
 // Admin booking routes (admin only)
 router.get("/admin/all", verifyTokenAndAdmin, getAllBookings);

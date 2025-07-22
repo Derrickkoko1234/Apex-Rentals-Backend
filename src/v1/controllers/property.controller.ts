@@ -609,21 +609,20 @@ export async function createReview(req: ExtendedRequest, res: Response) {
         .json({ status: false, message: "Unauthorized", data: null });
     }
     const userId = user._id;
-    const { propertyId, bookingId, rating, comment } = req.body;
-    if (!userId || !propertyId || !bookingId || !rating || !comment) {
+    const propertyId = req.params.id;
+    const { rating, comment } = req.body;
+    if (!userId || !propertyId || !rating || !comment) {
       return res.status(400).json({
         status: false,
         message: "Missing required fields",
         data: null,
       });
     }
-    // Check if booking exists, belongs to user, is for the property, and is completed
+    // Find the most recent completed booking for this user and property
     const booking = await Booking.findOne({
-      _id: bookingId,
       user: userId,
       property: propertyId,
-      status: "completed",
-    });
+    }).sort({ endDate: -1 });
     if (!booking) {
       return res.status(403).json({
         status: false,
@@ -636,7 +635,7 @@ export async function createReview(req: ExtendedRequest, res: Response) {
     const existing = await Review.findOne({
       property: propertyId,
       user: userId,
-      booking: bookingId,
+      booking: booking._id,
     });
     if (existing) {
       return res.status(400).json({
@@ -648,7 +647,7 @@ export async function createReview(req: ExtendedRequest, res: Response) {
     const review = new Review({
       property: propertyId,
       user: userId,
-      booking: bookingId,
+      booking: booking._id,
       rating,
       comment,
     });

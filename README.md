@@ -13,7 +13,6 @@ Users can review properties they have previously booked (and completed the booki
 - **Body:**
   ```json
   {
-    "bookingId": "<booking_id>",
     "rating": 5, // integer 1-5
     "comment": "Great place!"
   }
@@ -31,17 +30,22 @@ Users can review properties they have previously booked (and completed the booki
   {
     "status": true,
     "message": "Reviews fetched successfully",
-    "data": [
-      {
-        "_id": "...",
-        "property": "...",
-        "user": { "_id": "...", "name": "..." },
-        "booking": "...",
-        "rating": 5,
-        "comment": "Great place!",
-        "createdAt": "..."
-      }
-    ]
+    "data": {
+      "data": [
+        {
+          "_id": "...",
+          "property": "...",
+          "user": { "_id": "...", "firstName": "...", "lastName": "...", "avatar": "..." },
+          "booking": "...",
+          "rating": 5,
+          "comment": "Great place!",
+          "createdAt": "..."
+        }
+      ],
+      "currentPage": 1,
+      "totalPages": 1,
+      "total": 1
+    }
   }
   ```
 
@@ -58,7 +62,6 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "bookingId": "BOOKING_ID",
   "rating": 4,
   "comment": "Nice and clean!"
 }
@@ -67,4 +70,51 @@ Content-Type: application/json
 **Get Reviews:**
 ```http
 GET /api/v1/properties/PROPERTY_ID/reviews
+```
+
+## Admin Dashboard Stats Endpoint
+
+### Overview
+This endpoint provides all the necessary statistics for the admin dashboard home page.
+
+### Endpoint
+- **URL:** `GET /api/v1/admin/dashboard-stats`
+- **Auth:** (Add your admin authentication as needed)
+
+### Response Example
+```json
+{
+  "status": true,
+  "message": "Dashboard stats fetched successfully",
+  "data": {
+    "users": {
+      "total": 100,
+      "admins": 3,
+      "landlords": 10,
+      "recent": [
+        { "_id": "...", "firstName": "...", "lastName": "...", "email": "...", "role": "admin", "createdAt": "..." }
+      ]
+    },
+    "properties": {
+      "total": 50,
+      "approved": 40,
+      "pending": 5,
+      "rejected": 5,
+      "recent": [
+        { "_id": "...", "title": "...", "type": "...", "landlord": "...", "isApproved": true, "createdAt": "..." }
+      ]
+    },
+    "bookings": {
+      "total": 200,
+      "completed": 150,
+      "pending": 30,
+      "cancelled": 20,
+      "recent": [
+        { "_id": "...", "user": { "_id": "...", "firstName": "...", "lastName": "..." }, "property": { "_id": "...", "title": "..." }, "bookingStatus": "completed", "createdAt": "..." }
+      ]
+    },
+    "revenue": 123456.78,
+    "reviews": 80
+  }
+}
 ```
