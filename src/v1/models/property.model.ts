@@ -6,12 +6,20 @@ import {
 } from "../enums/propertyTypes.enum";
 import { Utilities, Category } from "../enums/propertyTypes.enum";
 
+interface Address {
+  houseNumber: string;
+  street: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
 interface IProperty extends BaseModel {
   landlord: Types.ObjectId;
   title: string;
   type: string;
   subType: string;
-  address: string;
+  address: Address;
   latitude: number;
   longitude: number;
   utilities: Utilities[];
@@ -20,7 +28,7 @@ interface IProperty extends BaseModel {
   parking: boolean;
   furnished: boolean;
   shortTermRental: boolean;
-  leaseTerms: "daily" | "monthly" | "negotiable";
+  leaseTerms: "daily" | "monthly" | "yearly";
   petFriendly: boolean;
   bedrooms: number;
   bathrooms: number;
@@ -62,9 +70,11 @@ const propertySchema = new Schema(
       required: true,
     },
     address: {
-      type: String,
-      required: true,
-      index: true,
+      houseNumber: { type: String, required: true },
+      street: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      country: { type: String, required: true },
     },
     latitude: {
       type: Number,
@@ -100,7 +110,7 @@ const propertySchema = new Schema(
     },
     leaseTerms: {
       type: String,
-      enum: ["monthly", "negotiable"],
+      enum: ["daily", "monthly", "yearly"],
       required: true,
     },
     petFriendly: {
@@ -161,4 +171,4 @@ const propertySchema = new Schema(
 
 const Property = model<IProperty>("Property", propertySchema);
 
-export { IProperty, Property };
+export { Address, IProperty, Property };

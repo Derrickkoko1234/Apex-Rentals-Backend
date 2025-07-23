@@ -1,5 +1,6 @@
 import { Schema, model, Types, Document, Model } from "mongoose";
 import { BaseModel } from "../interfaces/general.interface";
+import { Address } from "./property.model"; // Adjust the import path as necessary
 
 export enum ConversationStatus {
   ACTIVE = "active",
@@ -26,7 +27,7 @@ interface IConversation extends BaseModel {
   deletedBy: Types.ObjectId[];
   metadata?: {
     propertyTitle?: string;
-    propertyAddress?: string;
+    propertyAddress?: Address;
     inquiryType?: string;
   };
 }
@@ -103,7 +104,13 @@ const conversationSchema = new Schema(
     ],
     metadata: {
       propertyTitle: String,
-      propertyAddress: String,
+      propertyAddress: {
+        street: String,
+        city: String,
+        state: String,
+        zipCode: String,
+        country: String,
+      },
       inquiryType: String,
     },
   },

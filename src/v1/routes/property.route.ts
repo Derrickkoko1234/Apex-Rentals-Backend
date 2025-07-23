@@ -9,7 +9,12 @@ import {
   removeFromWishlist,
   createProperty,
   approveProperty,
-  rejectProperty,getAllProperties, createReview, getPropertyReviews
+  rejectProperty,
+  getAllProperties,
+  createReview,
+  getPropertyReviews,
+  getTopProperties,
+  getTopCities,
 } from "../controllers/property.controller";
 import {
   verifyToken,
@@ -67,8 +72,15 @@ router.get(
 
 // Fetch reviews for a property
 router.get("/:id/reviews", getPropertyReviews);
+
 // Create a review for a property (user must be authenticated)
 router.post("/:id/reviews", verifyToken, createReview);
+
+// Endpoint to get top properties based on various criteria
+router.get("/top-properties", getTopProperties);
+
+// Fetch top cities with available properties
+router.get("/top-cities", getTopCities);
 
 // // Example of rate-limited endpoint for authenticated users
 // router.get(
