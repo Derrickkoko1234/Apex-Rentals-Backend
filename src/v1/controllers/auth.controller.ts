@@ -255,10 +255,7 @@ export async function uploadKyc(
     res.status(200).json({
       status: true,
       message: "KYC documents uploaded successfully and are pending approval",
-      data: {
-        kyc: updatedUser.kyc,
-        isKycCompleted: updatedUser.isKycCompleted,
-      },
+      data: updatedUser,
     });
   } catch (err) {
     res.status(500).json({
