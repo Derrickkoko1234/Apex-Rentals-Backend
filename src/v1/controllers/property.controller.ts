@@ -702,3 +702,76 @@ export async function getPropertyReviews(req: ExtendedRequest, res: Response) {
       .json({ status: false, message: (err as Error).message, data: null });
   }
 }
+
+// Get top 3 peoperties with most bookings
+export async function getTopProperties(req: ExtendedRequest, res: Response) {
+  try {
+    // Aggregate to count bookings per property
+    const result = await Booking.aggregate([
+      // { $match: { status: "completed" } }, // Only consider completed bookings
+      { $group: { _id: "$property", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 3 },
+    ]);
+
+    // Populate property details
+    const properties = await Property.find({
+      _id: { $in: result.map((item) => item._id) },
+      isDeleted: false,
+    }).populate("landlord");
+
+    // Format response
+    const topProperties = properties.map((property) => {
+      const bookingCount =
+        result.find((item) => item._id.toString() === property._id.toString())
+          ?.count || 0;
+      return {
+        ...property.toObject(),
+        bookingCount,
+      };
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "Top properties fetched successfully",
+      data: topProperties,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+// Get top 5 available cities where properties are available
+export async function getTopCities(req: ExtendedRequest, res: Response) {
+  try {
+    // Aggregate to count properties per city (not deleted)
+    const result = await Property.aggregate([
+      { $match: { isDeleted: false } },
+      { $group: { _id: "$address.city", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // Format response as array of { city, count }
+    const cities = result.map((item) => ({
+      city: item._id,
+      count: item.count,
+    }));
+
+    return res.status(200).json({
+      status: true,
+      message: "Top 5 cities fetched successfully",
+      data: cities,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
