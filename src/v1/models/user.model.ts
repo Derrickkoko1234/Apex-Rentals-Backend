@@ -13,6 +13,13 @@ interface IUser extends BaseModel {
   gender?: string | null;
   phone: string;
   isVerified: boolean;
+  kyc?: {
+    documentType: string;
+    documentNumber: string;
+    documentUrl: string;
+    status: "pending" | "approved" | "rejected";
+  };
+  isKycCompleted?: boolean;
 }
 
 const UserSchema: Schema = new Schema(
@@ -57,6 +64,29 @@ const UserSchema: Schema = new Schema(
       required: true,
     },
     isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    kyc: {
+      documentType: {
+        type: String,
+        required: false,
+      },
+      documentNumber: {
+        type: String,
+        required: false,
+      },
+      documentUrl: {
+        type: String,
+        required: false,
+      },
+      status: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
+      },
+    },
+    isKycCompleted: {
       type: Boolean,
       default: false,
     },

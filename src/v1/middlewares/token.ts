@@ -316,3 +316,20 @@ export function createUserRateLimit(maxRequests: number, windowMs: number) {
     }
   };
 }
+
+// Middleware to ensure KYC completion for landlords
+export async function requireKyc(
+  req: ExtendedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const user = req.user;
+  if (user?.role === "landlord" && !user.isKycCompleted) {
+    return res.status(403).json({
+      status: false,
+      message: "KYC not completed. Please upload your KYC details.",
+      data: null,
+    });
+  }
+  next();
+}

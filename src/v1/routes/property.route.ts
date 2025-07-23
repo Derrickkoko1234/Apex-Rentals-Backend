@@ -21,6 +21,7 @@ import {
   verifyTokenOptional,
   verifyTokenAndRole,
   createUserRateLimit,
+  requireKyc,
 } from "../middlewares/token";
 import { RoleEnum } from "../enums/role.enum";
 
@@ -51,7 +52,7 @@ router.get("/wishlist", verifyToken, getUserWishlistItems);
 // Endpoint to remove a property from the user's wishlist
 router.delete("/wishlist/:id", verifyToken, removeFromWishlist);
 
-router.post("/create", verifyTokenAndRole(RoleEnum.LANDLORD), createProperty);
+router.post("/create", verifyTokenAndRole(RoleEnum.LANDLORD), requireKyc, createProperty);
 
 // Endpoint to approve a property (admin only)
 router.post(
