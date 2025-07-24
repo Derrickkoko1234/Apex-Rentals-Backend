@@ -58,20 +58,15 @@ export async function getAdminDashboardStats(req: Request, res: Response) {
     const totalReviews = await Review.countDocuments({});
 
     // Recent activity
-    const recentUsers = await User.find({})
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select("_id firstName lastName email role createdAt");
+    const recentUsers = await User.find({}).sort({ createdAt: -1 }).limit(5);
     const recentProperties = await Property.find({})
       .sort({ createdAt: -1 })
-      .limit(5)
-      .select("_id title type landlord isApproved createdAt");
+      .limit(5);
     const recentBookings = await Booking.find({})
       .sort({ createdAt: -1 })
       .limit(5)
       .populate("user", "firstName lastName")
-      .populate("property", "title")
-      .select("_id user property bookingStatus createdAt");
+      .populate("property", "title");
 
     return res.status(200).json({
       status: true,
