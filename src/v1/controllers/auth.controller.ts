@@ -252,13 +252,12 @@ export async function uploadKyc(
 
     await updatedUser.save();
 
+    const token = signToken(updatedUser, { for_password: false });
+
     res.status(200).json({
       status: true,
       message: "KYC documents uploaded successfully and are pending approval",
-      data: {
-        kyc: updatedUser.kyc,
-        isKycCompleted: updatedUser.isKycCompleted,
-      },
+      data: updatedUser,
     });
   } catch (err) {
     res.status(500).json({
