@@ -440,11 +440,11 @@ export async function getUserStats(req: ExtendedRequest, res: Response) {
     });
     const regularUsers = await User.countDocuments({ role: RoleEnum.USER });
 
-    // Get users registered in the last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Get users registered this month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const recentUsers = await User.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo },
+      createdAt: { $gte: startOfMonth },
     });
 
     return res.status(200).json({
@@ -455,9 +455,9 @@ export async function getUserStats(req: ExtendedRequest, res: Response) {
         verifiedUsers,
         unverifiedUsers,
         adminUsers,
-        landlordUsers,
+        landlords: landlordUsers,
         regularUsers,
-        recentUsers,
+        newUsersThisMonth: recentUsers,
         verificationRate:
           totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100).toFixed(2) : 0,
       },
