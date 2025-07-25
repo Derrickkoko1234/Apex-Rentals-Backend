@@ -107,9 +107,15 @@ export async function changePassword(req: ExtendedRequest, res: Response) {
     } else {
       // check if old password is correct
       const oldPassword = req.body.oldPassword as string;
-      const userWithPassword = await User.findById(user._id).select('+password');
-      
-      if (!oldPassword || !userWithPassword || !(await comparePassword(oldPassword, userWithPassword.password))) {
+      const userWithPassword = await User.findById(user._id).select(
+        "+password"
+      );
+
+      if (
+        !oldPassword ||
+        !userWithPassword ||
+        !(await comparePassword(oldPassword, userWithPassword.password))
+      ) {
         return res.status(400).json({
           status: false,
           message: "Old password is incorrect",
@@ -167,21 +173,21 @@ export async function getAllUsers(req: ExtendedRequest, res: Response) {
 
     // Build query
     const query: any = {};
-    
+
     if (role && Object.values(RoleEnum).includes(role as RoleEnum)) {
       query.role = role;
     }
-    
+
     if (isVerified !== undefined) {
-      query.isVerified = isVerified === 'true';
+      query.isVerified = isVerified === "true";
     }
-    
+
     if (search) {
       query.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -200,7 +206,7 @@ export async function getAllUsers(req: ExtendedRequest, res: Response) {
         currentPage: page,
         totalPages: Math.ceil(totalUsers / limit),
         total: totalUsers,
-      }
+      },
     });
   } catch (err) {
     return res.status(500).json({
@@ -270,7 +276,7 @@ export async function updateUserById(req: ExtendedRequest, res: Response) {
     if (req.body.email) {
       const emailExists = await User.findOne({
         email: req.body.email,
-        _id: { $ne: id }
+        _id: { $ne: id },
       });
 
       if (emailExists) {
@@ -358,7 +364,10 @@ export async function deleteUserById(req: ExtendedRequest, res: Response) {
 }
 
 // Verify/Unverify user
-export async function toggleUserVerification(req: ExtendedRequest, res: Response) {
+export async function toggleUserVerification(
+  req: ExtendedRequest,
+  res: Response
+) {
   try {
     const { id } = req.params;
 
@@ -380,15 +389,34 @@ export async function toggleUserVerification(req: ExtendedRequest, res: Response
       });
     }
 
+    // Only allow toggling KYC for landlords with a KYC document
+    if (user.role !== RoleEnum.LANDLORD || !user.kyc || !user.kyc.documentUrl) {
+      return res.status(400).json({
+        status: false,
+        message:
+          "KYC verification can only be toggled for landlords with a KYC document uploaded.",
+        data: null,
+      });
+    }
+
+    const newKycStatus =
+      user.kyc.status === "approved" ? "rejected" : "approved";
+    const isKycCompleted = newKycStatus === "approved";
+
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { isVerified: !user.isVerified },
+      {
+        "kyc.status": newKycStatus,
+        isKycCompleted: isKycCompleted,
+      },
       { new: true }
     );
 
     return res.status(200).json({
       status: true,
-      message: `User ${updatedUser?.isVerified ? 'verified' : 'unverified'} successfully`,
+      message: `KYC ${
+        updatedUser?.kyc?.status === "approved" ? "approved" : "rejected"
+      } successfully`,
       data: updatedUser,
     });
   } catch (err) {
@@ -407,14 +435,16 @@ export async function getUserStats(req: ExtendedRequest, res: Response) {
     const verifiedUsers = await User.countDocuments({ isVerified: true });
     const unverifiedUsers = await User.countDocuments({ isVerified: false });
     const adminUsers = await User.countDocuments({ role: RoleEnum.ADMIN });
-    const landlordUsers = await User.countDocuments({ role: RoleEnum.LANDLORD });
+    const landlordUsers = await User.countDocuments({
+      role: RoleEnum.LANDLORD,
+    });
     const regularUsers = await User.countDocuments({ role: RoleEnum.USER });
 
     // Get users registered in the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentUsers = await User.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo }
+      createdAt: { $gte: thirtyDaysAgo },
     });
 
     return res.status(200).json({
@@ -428,8 +458,9 @@ export async function getUserStats(req: ExtendedRequest, res: Response) {
         landlordUsers,
         regularUsers,
         recentUsers,
-        verificationRate: totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100).toFixed(2) : 0
-      }
+        verificationRate:
+          totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100).toFixed(2) : 0,
+      },
     });
   } catch (err) {
     return res.status(500).json({
@@ -439,4 +470,3 @@ export async function getUserStats(req: ExtendedRequest, res: Response) {
     });
   }
 }
-
