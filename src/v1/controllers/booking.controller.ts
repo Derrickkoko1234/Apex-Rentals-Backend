@@ -285,7 +285,8 @@ export async function getBookingDetails(req: ExtendedRequest, res: Response) {
   }
 
   try {
-    const booking = await Booking.findOne({ _id: id, user: req.user?._id })
+    const booking = await Booking.findOne({ _id: id })
+      .populate("user")
       .populate("property")
       .populate("paymentId");
     if (!booking) {

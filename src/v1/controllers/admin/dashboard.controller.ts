@@ -65,8 +65,8 @@ export async function getAdminDashboardStats(req: Request, res: Response) {
     const recentBookings = await Booking.find({})
       .sort({ createdAt: -1 })
       .limit(5)
-      .populate("user", "firstName lastName")
-      .populate("property", "title");
+      .populate("user")
+      .populate("property");
 
     return res.status(200).json({
       status: true,
