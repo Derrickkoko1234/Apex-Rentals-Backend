@@ -6,6 +6,7 @@ import propertyRoutes from "./property.route";
 import bookingRoutes from "./booking.route";
 import chatRoutes from "./chat.route";
 import adminRoutes from "./admin/index.route";
+import landlordRoutes from "./landlord/index.route";
 import { imagekitUploader } from "../utils/imageKitUpload";
 import { verifyToken } from "../middlewares/token";
 
@@ -17,6 +18,7 @@ router.use("/property", propertyRoutes);
 router.use("/bookings", bookingRoutes);
 router.use("/chat", chatRoutes);
 router.use("/admin", adminRoutes);
+router.use("/landlord", landlordRoutes);
 
 type FileType = "images" | "pdf" | "audio" | "video";
 

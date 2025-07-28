@@ -23,7 +23,7 @@
  * - createUserRateLimit(100, 3600000): Rate limit 100 requests per hour per user
  */
 
-import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
 import { RoleEnum } from "../enums/role.enum";
 import { IUser, User } from "../models/user.model";
@@ -324,12 +324,15 @@ export async function requireKyc(
   next: NextFunction
 ) {
   const user = req.user;
-  if (user?.role === "landlord" && !user.isKycCompleted) {
-    return res.status(403).json({
-      status: false,
-      message: "KYC not completed. Please upload your KYC details.",
-      data: null,
-    });
+  if (user?.role === RoleEnum.LANDLORD) {
+    const isKycCompleted = user.isKycCompleted;
+    if (!isKycCompleted) {
+      return res.status(403).json({
+        status: false,
+        message: "KYC not completed. Please upload your KYC details.",
+        data: null,
+      });
+    }
   }
   next();
 }
