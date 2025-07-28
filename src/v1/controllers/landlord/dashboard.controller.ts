@@ -58,6 +58,7 @@ export async function getLandlordDashboard(req: any, res: Response) {
 
     return res.status(200).json({
       status: true,
+      message: "Dashboard stats retrieved successfully",
       data: {
         activeProperties,
         totalBookings,
