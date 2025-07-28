@@ -5,6 +5,6 @@ import { verifyToken } from "../../middlewares/token";
 const router = Router();
 
 // Landlord dashboard route
-router.get("/dashboard", verifyToken, getLandlordDashboard);
+router.get("/stats", verifyToken, getLandlordDashboard);
 
 export default router;
