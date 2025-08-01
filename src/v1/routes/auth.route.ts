@@ -6,6 +6,9 @@ import {
   verifyUser,
   uploadKyc,
   getKycStatus,
+  requestPasswordReset,
+  verifyPasswordResetCode,
+  resetPassword
 } from "../controllers/auth.controller";
 import {
   verifyToken,
@@ -23,5 +26,10 @@ router.post("/verify", verifyUser);
 router.post("/login", login);
 router.post("/upload-kyc", verifyTokenAndRole(RoleEnum.LANDLORD), uploadKyc);
 router.get("/kyc-status", verifyTokenAndRole(RoleEnum.LANDLORD), getKycStatus);
+
+// Password reset routes
+router.post("/request-password-reset", requestPasswordReset);
+router.post("/verify-password-reset-code", verifyPasswordResetCode);
+router.post("/reset-password", resetPassword);
 
 export default router;

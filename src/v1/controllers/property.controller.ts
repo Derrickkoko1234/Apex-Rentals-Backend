@@ -708,28 +708,39 @@ export async function getTopProperties(req: ExtendedRequest, res: Response) {
   try {
     // Aggregate to count bookings per property
     const result = await Booking.aggregate([
-      // { $match: { status: "completed" } }, // Only consider completed bookings
       { $group: { _id: "$property", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 3 },
     ]);
 
-    // Populate property details
-    const properties = await Property.find({
-      _id: { $in: result.map((item) => item._id) },
-      isDeleted: false,
-    }).populate("landlord");
+    let topProperties = [];
+    if (result.length > 0) {
+      // Populate property details for those with bookings
+      const properties = await Property.find({
+        _id: { $in: result.map((item) => item._id) },
+        isDeleted: false,
+      }).populate("landlord");
 
-    // Format response
-    const topProperties = properties.map((property) => {
-      const bookingCount =
-        result.find((item) => item._id.toString() === property._id.toString())
-          ?.count || 0;
-      return {
+      topProperties = properties.map((property) => {
+        const bookingCount =
+          result.find((item) => item._id.toString() === property._id.toString())
+            ?.count || 0;
+        return {
+          ...property.toObject(),
+          bookingCount,
+        };
+      });
+    } else {
+      // No bookings: return top 3 properties by creation date
+      const properties = await Property.find({ isDeleted: false })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .populate("landlord");
+      topProperties = properties.map((property) => ({
         ...property.toObject(),
-        bookingCount,
-      };
-    });
+        bookingCount: 0,
+      }));
+    }
 
     return res.status(200).json({
       status: true,
