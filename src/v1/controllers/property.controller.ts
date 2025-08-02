@@ -490,6 +490,66 @@ export async function createProperty(req: ExtendedRequest, res: Response) {
   }
 }
 
+export async function editProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: "Property not found",
+        data: null,
+      });
+    }
+
+    // Only update fields that were passed in the request
+    const updateFields = req.body;
+    
+    // Check each field and only update if it was provided
+    if ('title' in updateFields) property.title = updateFields.title;
+    if ('type' in updateFields) property.type = updateFields.type;
+    if ('subType' in updateFields) property.subType = updateFields.subType;
+    if ('address' in updateFields) property.address = updateFields.address;
+    if ('latitude' in updateFields) property.latitude = updateFields.latitude;
+    if ('longitude' in updateFields) property.longitude = updateFields.longitude;
+    if ('utilities' in updateFields) property.utilities = updateFields.utilities;
+    if ('categories' in updateFields) property.categories = updateFields.categories;
+    if ('yearBuilt' in updateFields) property.yearBuilt = updateFields.yearBuilt;
+    if ('parking' in updateFields) property.parking = updateFields.parking;
+    if ('furnished' in updateFields) property.furnished = updateFields.furnished;
+    if ('shortTermRental' in updateFields) property.shortTermRental = updateFields.shortTermRental;
+    if ('leaseTerms' in updateFields) property.leaseTerms = updateFields.leaseTerms;
+    if ('petFriendly' in updateFields) property.petFriendly = updateFields.petFriendly;
+    if ('bedrooms' in updateFields) property.bedrooms = updateFields.bedrooms;
+    if ('bathrooms' in updateFields) property.bathrooms = updateFields.bathrooms;
+    if ('rent' in updateFields) property.rent = updateFields.rent;
+    if ('unitSize' in updateFields) property.unitSize = updateFields.unitSize;
+    if ('photos' in updateFields) property.photos = updateFields.photos;
+    if ('description' in updateFields) property.description = updateFields.description;
+    if ('leadContact' in updateFields) property.leadContact = updateFields.leadContact;
+
+    const updatedProperty = await property.save();
+    return res.status(200).json({
+      status: true,
+      message: "Property updated successfully",
+      data: updatedProperty,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
 export async function approveProperty(req: ExtendedRequest, res: Response) {
   try {
     const propertyId = req.params.id;

@@ -7,7 +7,7 @@ import {
   addToWishlist,
   getUserWishlistItems,
   removeFromWishlist,
-  createProperty,
+  createProperty,editProperty,
   approveProperty,
   rejectProperty,
   getAllProperties,
@@ -58,6 +58,13 @@ router.post(
   verifyTokenAndRole(RoleEnum.LANDLORD),
   requireKyc,
   createProperty
+);
+
+// Endpoint to edit a property (landlord only)
+router.put(
+  "/edit/:id",
+  verifyTokenAndRole(RoleEnum.LANDLORD),
+  editProperty
 );
 
 // Endpoint to approve a property (admin only)
