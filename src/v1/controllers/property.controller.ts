@@ -786,3 +786,38 @@ export async function getTopCities(req: ExtendedRequest, res: Response) {
     });
   }
 }
+
+export async function deleteProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: "Property not found",
+        data: null,
+      });
+    }
+    property.isDeleted = true;
+    property.deletedAt = new Date();
+    await property.save();
+    return res.status(200).json({
+      status: true,
+      message: "Property deleted successfully",
+      data: null,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
