@@ -151,6 +151,25 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
       Property.countDocuments(query),
     ]);
 
+    // Calculate average rating for each property
+    const propertiesWithRating = await Promise.all(
+      properties.map(async (property) => {
+        const reviews = await Review.find({ property: property._id });
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews > 0 
+          ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+          : 0;
+        
+        return {
+          ...property.toObject(),
+          rating: {
+            average: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+            count: totalReviews
+          }
+        };
+      })
+    );
+
     const totalPages = Math.ceil(totalCount / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
@@ -189,7 +208,7 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
           leaseTerms,
           petFriendly,
         },
-        data: properties,
+        data: propertiesWithRating,
       },
     });
   } catch (err) {
@@ -490,6 +509,66 @@ export async function createProperty(req: ExtendedRequest, res: Response) {
   }
 }
 
+export async function editProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: "Property not found",
+        data: null,
+      });
+    }
+
+    // Only update fields that were passed in the request
+    const updateFields = req.body;
+    
+    // Check each field and only update if it was provided
+    if ('title' in updateFields) property.title = updateFields.title;
+    if ('type' in updateFields) property.type = updateFields.type;
+    if ('subType' in updateFields) property.subType = updateFields.subType;
+    if ('address' in updateFields) property.address = updateFields.address;
+    if ('latitude' in updateFields) property.latitude = updateFields.latitude;
+    if ('longitude' in updateFields) property.longitude = updateFields.longitude;
+    if ('utilities' in updateFields) property.utilities = updateFields.utilities;
+    if ('categories' in updateFields) property.categories = updateFields.categories;
+    if ('yearBuilt' in updateFields) property.yearBuilt = updateFields.yearBuilt;
+    if ('parking' in updateFields) property.parking = updateFields.parking;
+    if ('furnished' in updateFields) property.furnished = updateFields.furnished;
+    if ('shortTermRental' in updateFields) property.shortTermRental = updateFields.shortTermRental;
+    if ('leaseTerms' in updateFields) property.leaseTerms = updateFields.leaseTerms;
+    if ('petFriendly' in updateFields) property.petFriendly = updateFields.petFriendly;
+    if ('bedrooms' in updateFields) property.bedrooms = updateFields.bedrooms;
+    if ('bathrooms' in updateFields) property.bathrooms = updateFields.bathrooms;
+    if ('rent' in updateFields) property.rent = updateFields.rent;
+    if ('unitSize' in updateFields) property.unitSize = updateFields.unitSize;
+    if ('photos' in updateFields) property.photos = updateFields.photos;
+    if ('description' in updateFields) property.description = updateFields.description;
+    if ('leadContact' in updateFields) property.leadContact = updateFields.leadContact;
+
+    const updatedProperty = await property.save();
+    return res.status(200).json({
+      status: true,
+      message: "Property updated successfully",
+      data: updatedProperty,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
 export async function approveProperty(req: ExtendedRequest, res: Response) {
   try {
     const propertyId = req.params.id;
@@ -708,28 +787,39 @@ export async function getTopProperties(req: ExtendedRequest, res: Response) {
   try {
     // Aggregate to count bookings per property
     const result = await Booking.aggregate([
-      // { $match: { status: "completed" } }, // Only consider completed bookings
       { $group: { _id: "$property", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 3 },
     ]);
 
-    // Populate property details
-    const properties = await Property.find({
-      _id: { $in: result.map((item) => item._id) },
-      isDeleted: false,
-    }).populate("landlord");
+    let topProperties = [];
+    if (result.length > 0) {
+      // Populate property details for those with bookings
+      const properties = await Property.find({
+        _id: { $in: result.map((item) => item._id) },
+        isDeleted: false,
+      }).populate("landlord");
 
-    // Format response
-    const topProperties = properties.map((property) => {
-      const bookingCount =
-        result.find((item) => item._id.toString() === property._id.toString())
-          ?.count || 0;
-      return {
+      topProperties = properties.map((property) => {
+        const bookingCount =
+          result.find((item) => item._id.toString() === property._id.toString())
+            ?.count || 0;
+        return {
+          ...property.toObject(),
+          bookingCount,
+        };
+      });
+    } else {
+      // No bookings: return top 3 properties by creation date
+      const properties = await Property.find({ isDeleted: false })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .populate("landlord");
+      topProperties = properties.map((property) => ({
         ...property.toObject(),
-        bookingCount,
-      };
-    });
+        bookingCount: 0,
+      }));
+    }
 
     return res.status(200).json({
       status: true,
@@ -766,6 +856,41 @@ export async function getTopCities(req: ExtendedRequest, res: Response) {
       status: true,
       message: "Top 5 cities fetched successfully",
       data: cities,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+export async function deleteProperty(req: ExtendedRequest, res: Response) {
+  try {
+    const propertyId = req.params.id;
+    if (!propertyId) {
+      return res.status(400).json({
+        status: false,
+        message: "Property ID is required",
+        data: null,
+      });
+    }
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        status: false,
+        message: "Property not found",
+        data: null,
+      });
+    }
+    property.isDeleted = true;
+    property.deletedAt = new Date();
+    await property.save();
+    return res.status(200).json({
+      status: true,
+      message: "Property deleted successfully",
+      data: null,
     });
   } catch (err) {
     return res.status(500).json({

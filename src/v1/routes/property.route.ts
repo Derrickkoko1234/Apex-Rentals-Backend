@@ -7,7 +7,7 @@ import {
   addToWishlist,
   getUserWishlistItems,
   removeFromWishlist,
-  createProperty,
+  createProperty,editProperty,
   approveProperty,
   rejectProperty,
   getAllProperties,
@@ -15,6 +15,7 @@ import {
   getPropertyReviews,
   getTopProperties,
   getTopCities,
+  deleteProperty,
 } from "../controllers/property.controller";
 import {
   verifyToken,
@@ -52,7 +53,19 @@ router.get("/wishlist", verifyToken, getUserWishlistItems);
 // Endpoint to remove a property from the user's wishlist
 router.delete("/wishlist/:id", verifyToken, removeFromWishlist);
 
-router.post("/create", verifyTokenAndRole(RoleEnum.LANDLORD), requireKyc, createProperty);
+router.post(
+  "/create",
+  verifyTokenAndRole(RoleEnum.LANDLORD),
+  requireKyc,
+  createProperty
+);
+
+// Endpoint to edit a property (landlord only)
+router.put(
+  "/edit/:id",
+  verifyTokenAndRole(RoleEnum.LANDLORD),
+  editProperty
+);
 
 // Endpoint to approve a property (admin only)
 router.post(
@@ -105,11 +118,7 @@ router.get("/top-cities", getTopCities);
 //   // updateProperty controller would go here
 // );
 
-// // Only admin can delete properties
-// router.delete(
-//   "/:id",
-//   verifyTokenAndRole(RoleEnum.ADMIN)
-//   // deleteProperty controller would go here
-// );
+// Only admin can delete properties
+router.delete("/delete-property/:id", verifyTokenAndRole(RoleEnum.ADMIN), deleteProperty);
 
 export default router;

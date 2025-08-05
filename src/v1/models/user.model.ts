@@ -82,8 +82,8 @@ const UserSchema: Schema = new Schema(
       },
       status: {
         type: String,
-        enum: ["pending", "approved", "rejected"],
-        default: "pending",
+        enum: ["not_submitted", "pending", "approved", "rejected"],
+        default: "not_submitted",
       },
     },
     isKycCompleted: {

@@ -208,16 +208,6 @@ export async function uploadKyc(
       return;
     }
 
-    // Only landlords can upload KYC
-    if (user.role !== RoleEnum.LANDLORD) {
-      res.status(403).json({
-        status: false,
-        message: "Only landlords can upload KYC documents",
-        data: null,
-      });
-      return;
-    }
-
     const { documentType, documentNumber, documentUrl } = req.body;
 
     // Validate required fields
@@ -300,6 +290,114 @@ export async function getKycStatus(
         kyc: user.kyc || null,
         isKycCompleted: user.isKycCompleted || false,
       },
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+// Request password reset code
+export async function requestPasswordReset(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json({
+        status: false,
+        message: "User not found!",
+        data: null,
+      });
+      return;
+    }
+    const code = createOtp();
+    cache.set(`pwreset_${email}`, code.toString(), 600); // 10 mins
+    sendMail(email, {
+      subject: "Password Reset Request",
+      message: `Your password reset code is ${code}`,
+    });
+    res.status(200).json({
+      status: true,
+      message: "Password reset code sent to your email!",
+      data: null,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+// Verify password reset code
+export async function verifyPasswordResetCode(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const { email, code } = req.body;
+    const cachedCode = cache.get(`pwreset_${email}`);
+    if (typeof cachedCode === "string" && cachedCode === code) {
+      res.status(200).json({
+        status: true,
+        message: "Code verified. You may now reset your password.",
+        data: null,
+      });
+    } else {
+      res.status(403).json({
+        status: false,
+        message: "Invalid or expired code!",
+        data: null,
+      });
+    }
+  } catch (err) {
+    res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+// Reset password using code
+export async function resetPassword(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const { email, code, newPassword } = req.body;
+    const cachedCode = cache.get(`pwreset_${email}`);
+    if (typeof cachedCode !== "string" || cachedCode !== code) {
+      res.status(403).json({
+        status: false,
+        message: "Invalid or expired code!",
+        data: null,
+      });
+      return;
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json({
+        status: false,
+        message: "User not found!",
+        data: null,
+      });
+      return;
+    }
+    user.password = await hashPassword(newPassword);
+    await user.save();
+    cache.del(`pwreset_${email}`);
+    res.status(200).json({
+      status: true,
+      message: "Password reset successfully!",
+      data: null,
     });
   } catch (err) {
     res.status(500).json({
