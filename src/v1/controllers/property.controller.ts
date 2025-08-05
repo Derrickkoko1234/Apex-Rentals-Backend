@@ -9,7 +9,8 @@ import {
 } from "../enums/propertyTypes.enum";
 import { WishlistItem } from "../models/wishlist.model";
 import { Review } from "../models/review.model";
-import { Booking } from "../models/booking.model";
+import { Booking, BookingStatus } from "../models/booking.model";
+import { Conversation } from "../models/conversation.model";
 
 export async function getPropertyEnums(req: ExtendedRequest, res: Response) {
   try {
@@ -156,16 +157,18 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
       properties.map(async (property) => {
         const reviews = await Review.find({ property: property._id });
         const totalReviews = reviews.length;
-        const averageRating = totalReviews > 0 
-          ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
-          : 0;
-        
+        const averageRating =
+          totalReviews > 0
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) /
+              totalReviews
+            : 0;
+
         return {
           ...property.toObject(),
           rating: {
             average: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
-            count: totalReviews
-          }
+            count: totalReviews,
+          },
         };
       })
     );
@@ -530,29 +533,40 @@ export async function editProperty(req: ExtendedRequest, res: Response) {
 
     // Only update fields that were passed in the request
     const updateFields = req.body;
-    
+
     // Check each field and only update if it was provided
-    if ('title' in updateFields) property.title = updateFields.title;
-    if ('type' in updateFields) property.type = updateFields.type;
-    if ('subType' in updateFields) property.subType = updateFields.subType;
-    if ('address' in updateFields) property.address = updateFields.address;
-    if ('latitude' in updateFields) property.latitude = updateFields.latitude;
-    if ('longitude' in updateFields) property.longitude = updateFields.longitude;
-    if ('utilities' in updateFields) property.utilities = updateFields.utilities;
-    if ('categories' in updateFields) property.categories = updateFields.categories;
-    if ('yearBuilt' in updateFields) property.yearBuilt = updateFields.yearBuilt;
-    if ('parking' in updateFields) property.parking = updateFields.parking;
-    if ('furnished' in updateFields) property.furnished = updateFields.furnished;
-    if ('shortTermRental' in updateFields) property.shortTermRental = updateFields.shortTermRental;
-    if ('leaseTerms' in updateFields) property.leaseTerms = updateFields.leaseTerms;
-    if ('petFriendly' in updateFields) property.petFriendly = updateFields.petFriendly;
-    if ('bedrooms' in updateFields) property.bedrooms = updateFields.bedrooms;
-    if ('bathrooms' in updateFields) property.bathrooms = updateFields.bathrooms;
-    if ('rent' in updateFields) property.rent = updateFields.rent;
-    if ('unitSize' in updateFields) property.unitSize = updateFields.unitSize;
-    if ('photos' in updateFields) property.photos = updateFields.photos;
-    if ('description' in updateFields) property.description = updateFields.description;
-    if ('leadContact' in updateFields) property.leadContact = updateFields.leadContact;
+    if ("title" in updateFields) property.title = updateFields.title;
+    if ("type" in updateFields) property.type = updateFields.type;
+    if ("subType" in updateFields) property.subType = updateFields.subType;
+    if ("address" in updateFields) property.address = updateFields.address;
+    if ("latitude" in updateFields) property.latitude = updateFields.latitude;
+    if ("longitude" in updateFields)
+      property.longitude = updateFields.longitude;
+    if ("utilities" in updateFields)
+      property.utilities = updateFields.utilities;
+    if ("categories" in updateFields)
+      property.categories = updateFields.categories;
+    if ("yearBuilt" in updateFields)
+      property.yearBuilt = updateFields.yearBuilt;
+    if ("parking" in updateFields) property.parking = updateFields.parking;
+    if ("furnished" in updateFields)
+      property.furnished = updateFields.furnished;
+    if ("shortTermRental" in updateFields)
+      property.shortTermRental = updateFields.shortTermRental;
+    if ("leaseTerms" in updateFields)
+      property.leaseTerms = updateFields.leaseTerms;
+    if ("petFriendly" in updateFields)
+      property.petFriendly = updateFields.petFriendly;
+    if ("bedrooms" in updateFields) property.bedrooms = updateFields.bedrooms;
+    if ("bathrooms" in updateFields)
+      property.bathrooms = updateFields.bathrooms;
+    if ("rent" in updateFields) property.rent = updateFields.rent;
+    if ("unitSize" in updateFields) property.unitSize = updateFields.unitSize;
+    if ("photos" in updateFields) property.photos = updateFields.photos;
+    if ("description" in updateFields)
+      property.description = updateFields.description;
+    if ("leadContact" in updateFields)
+      property.leadContact = updateFields.leadContact;
 
     const updatedProperty = await property.save();
     return res.status(200).json({
@@ -891,6 +905,66 @@ export async function deleteProperty(req: ExtendedRequest, res: Response) {
       status: true,
       message: "Property deleted successfully",
       data: null,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: (err as Error).message,
+      data: null,
+    });
+  }
+}
+
+// Get user dashboard data
+export async function getUserDashboard(req: ExtendedRequest, res: Response) {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized access",
+        data: null,
+      });
+    }
+
+    // 1. Active Bookings (confirmed and pending)
+    const activeBookings = await Booking.countDocuments({
+      user: userId,
+      bookingStatus: { $in: [BookingStatus.CONFIRMED, BookingStatus.PENDING] },
+    });
+
+    // 2. Wishlist Items
+    const wishlistItems = await WishlistItem.countDocuments({
+      user: userId,
+    });
+
+    // 3. Unread Messages
+    const conversations = await Conversation.find({
+      participants: userId,
+      isDeleted: false,
+    });
+    let unreadMessages = 0;
+    conversations.forEach((conv) => {
+      if (conv.unreadCount && typeof conv.unreadCount.get === "function") {
+        unreadMessages += conv.unreadCount.get(userId.toString()) || 0;
+      }
+    });
+
+    // 4. Past Stays (completed bookings)
+    const pastStays = await Booking.countDocuments({
+      user: userId,
+      bookingStatus: BookingStatus.COMPLETED,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "User dashboard data retrieved successfully",
+      data: {
+        activeBookings,
+        wishlistItems,
+        unreadMessages,
+        pastStays,
+      },
     });
   } catch (err) {
     return res.status(500).json({
