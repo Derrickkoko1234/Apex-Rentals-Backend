@@ -208,16 +208,6 @@ export async function uploadKyc(
       return;
     }
 
-    // Only landlords can upload KYC
-    if (user.role !== RoleEnum.LANDLORD) {
-      res.status(403).json({
-        status: false,
-        message: "Only landlords can upload KYC documents",
-        data: null,
-      });
-      return;
-    }
-
     const { documentType, documentNumber, documentUrl } = req.body;
 
     // Validate required fields

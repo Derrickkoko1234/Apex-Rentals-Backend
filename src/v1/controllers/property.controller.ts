@@ -151,6 +151,25 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
       Property.countDocuments(query),
     ]);
 
+    // Calculate average rating for each property
+    const propertiesWithRating = await Promise.all(
+      properties.map(async (property) => {
+        const reviews = await Review.find({ property: property._id });
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews > 0 
+          ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+          : 0;
+        
+        return {
+          ...property.toObject(),
+          rating: {
+            average: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
+            count: totalReviews
+          }
+        };
+      })
+    );
+
     const totalPages = Math.ceil(totalCount / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
@@ -189,7 +208,7 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
           leaseTerms,
           petFriendly,
         },
-        data: properties,
+        data: propertiesWithRating,
       },
     });
   } catch (err) {
