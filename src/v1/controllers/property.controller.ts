@@ -108,7 +108,11 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
-        { address: { $regex: search, $options: "i" } },
+        { "address.street": { $regex: search, $options: "i" } },
+        { "address.city": { $regex: search, $options: "i" } },
+        { "address.state": { $regex: search, $options: "i" } },
+        { "address.country": { $regex: search, $options: "i" } },
+        { "address.houseNumber": { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
     }
