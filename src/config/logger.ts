@@ -10,7 +10,6 @@ const logFormat = printf(({ level, message, timestamp }) => {
 const logger = createLogger({
   format: combine(timestamp({ format: "YYYY-MM-DD HH:mm:ss" }), logFormat),
   transports: [
-    new transports.Console(),
     new DailyRotateFile({
       dirname: "logs",
       filename: "application-%DATE%.log",

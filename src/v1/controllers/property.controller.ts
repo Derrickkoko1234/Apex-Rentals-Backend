@@ -108,7 +108,11 @@ export async function getProperties(req: ExtendedRequest, res: Response) {
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
-        { address: { $regex: search, $options: "i" } },
+        { "address.street": { $regex: search, $options: "i" } },
+        { "address.city": { $regex: search, $options: "i" } },
+        { "address.state": { $regex: search, $options: "i" } },
+        { "address.country": { $regex: search, $options: "i" } },
+        { "address.houseNumber": { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
     }
@@ -527,6 +531,19 @@ export async function editProperty(req: ExtendedRequest, res: Response) {
       return res.status(404).json({
         status: false,
         message: "Property not found",
+        data: null,
+      });
+    }
+
+    // if there is an active booking, don't allow edit
+    const activeBooking = await Booking.findOne({
+      property: property._id,
+      status: BookingStatus.CONFIRMED,
+    });
+    if (activeBooking) {
+      return res.status(400).json({
+        status: false,
+        message: "Property has an active booking",
         data: null,
       });
     }
