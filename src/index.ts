@@ -14,6 +14,14 @@ import v1Routes from "./v1/routes/index.route";
 import { ExtendedRequest } from "./v1/middlewares/token";
 import { dynamicImport } from "./v1/utils/dynamicImport";
 import { User } from "./v1/models/user.model";
+import { Booking } from "./v1/models/booking.model";
+import { Conversation } from "./v1/models/conversation.model";
+import { Message } from "./v1/models/message.model";
+import { Payment } from "./v1/models/payment.model";
+import { Property } from "./v1/models/property.model";
+import { Review } from "./v1/models/review.model";
+import { WishlistItem } from "./v1/models/wishlist.model";
+import CronService from "./v1/services/cron.service";
 
 dotenv.config();
 
@@ -40,16 +48,6 @@ app.use((req, res, next) => {
 // Then apply other middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Debug middleware
-app.use((req, res, next) => {
-  console.log("Request received:");
-  console.log("Origin:", req.headers.origin);
-  console.log("Method:", req.method);
-  console.log("Path:", req.path);
-  console.log("Headers:", JSON.stringify(req.headers, null, 2));
-  next();
-});
 
 // Use logger
 morgan.token("device", (req: Request) => {
@@ -117,6 +115,9 @@ let mongodbConn = mongoose
   .connect(mongoDb, {})
   .then(() => {
     console.log("[mongodb]: Connected to MongoDB");
+    
+    // Initialize cron jobs after database connection is established
+    CronService.initCronJobs();
   })
   .catch((error) => {
     console.log(`[mongodb]: ${error}`);
@@ -140,7 +141,16 @@ async function initializeAdminJS() {
     AdminJS.registerAdapter(AdminJSMongoose);
 
     const admin = new AdminJS({
-      resources: [User],
+      resources: [
+        User,
+        Booking,
+        Conversation,
+        Message,
+        Payment,
+        Property,
+        Review,
+        WishlistItem,
+      ],
       rootPath: "/admin",
     });
 

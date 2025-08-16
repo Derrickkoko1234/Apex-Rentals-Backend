@@ -531,6 +531,19 @@ export async function editProperty(req: ExtendedRequest, res: Response) {
       });
     }
 
+    // if there is an active booking, don't allow edit
+    const activeBooking = await Booking.findOne({
+      property: property._id,
+      status: BookingStatus.CONFIRMED,
+    });
+    if (activeBooking) {
+      return res.status(400).json({
+        status: false,
+        message: "Property has an active booking",
+        data: null,
+      });
+    }
+
     // Only update fields that were passed in the request
     const updateFields = req.body;
 
