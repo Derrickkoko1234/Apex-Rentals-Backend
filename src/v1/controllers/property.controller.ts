@@ -813,22 +813,50 @@ export async function getPropertyReviews(req: ExtendedRequest, res: Response) {
   }
 }
 
-// Get top 3 peoperties with most bookings
+// Get top 5 properties with most bookings in a city or state (only one location parameter allowed at a time)
 export async function getTopProperties(req: ExtendedRequest, res: Response) {
   try {
+    const { city, state } = req.query;
+    
+    // Validate that only one location parameter is provided
+    if (city && state) {
+      return res.status(400).json({
+        status: false,
+        message: "Only one location parameter (city or state) can be provided at a time",
+        data: null,
+      });
+    }
+    
+    // Build filter for city or state if provided
+    let locationFilter = {};
+    let locationMessage = "";
+    
+    if (city) {
+      locationFilter = { "address.city": city };
+      locationMessage = ` in ${city}`;
+    } else if (state) {
+      locationFilter = { "address.state": state };
+      locationMessage = ` in ${state}`;
+    }
+    
     // Aggregate to count bookings per property
     const result = await Booking.aggregate([
       { $group: { _id: "$property", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 3 },
+      { $limit: 4 },
     ]);
 
     let topProperties = [];
+    
     if (result.length > 0) {
-      // Populate property details for those with bookings
+      // Get property IDs that have bookings
+      const propertyIdsWithBookings = result.map((item) => item._id);
+      
+      // Populate property details for those with bookings (filtered by location if provided)
       const properties = await Property.find({
-        _id: { $in: result.map((item) => item._id) },
+        _id: { $in: propertyIdsWithBookings },
         isDeleted: false,
+        ...locationFilter
       }).populate("landlord");
 
       topProperties = properties.map((property) => {
@@ -840,11 +868,34 @@ export async function getTopProperties(req: ExtendedRequest, res: Response) {
           bookingCount,
         };
       });
+
+      // If we have less than 3 properties with bookings, fill with recent properties (filtered by location if provided)
+      if (topProperties.length < 3) {
+        const propertyIdsToExclude = topProperties.map(prop => prop._id);
+        const additionalProperties = await Property.find({
+          isDeleted: false,
+          ...locationFilter,
+          _id: { $nin: propertyIdsToExclude }
+        })
+          .sort({ createdAt: -1 })
+          .limit(5 - topProperties.length)
+          .populate("landlord");
+
+        const additionalPropertiesWithZeroBookings = additionalProperties.map((property) => ({
+          ...property.toObject(),
+          bookingCount: 0,
+        }));
+
+        topProperties = [...topProperties, ...additionalPropertiesWithZeroBookings];
+      }
     } else {
-      // No bookings: return top 3 properties by creation date
-      const properties = await Property.find({ isDeleted: false })
+      // No bookings: return top 5 properties by creation date (filtered by location if provided)
+      const properties = await Property.find({ 
+        isDeleted: false,
+        ...locationFilter 
+      })
         .sort({ createdAt: -1 })
-        .limit(3)
+        .limit(5)
         .populate("landlord");
       topProperties = properties.map((property) => ({
         ...property.toObject(),
@@ -854,7 +905,9 @@ export async function getTopProperties(req: ExtendedRequest, res: Response) {
 
     return res.status(200).json({
       status: true,
-      message: "Top properties fetched successfully",
+      message: locationMessage 
+        ? `Top properties${locationMessage} fetched successfully` 
+        : "Top properties fetched successfully",
       data: topProperties,
     });
   } catch (err) {
